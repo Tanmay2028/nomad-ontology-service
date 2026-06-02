@@ -1,0 +1,33 @@
+{
+  "template": "https://github.com/FAIRmat-NFDI/cookiecutter-nomad-plugin",
+  "commit": "ae953b0ba24e2df26daf5d641faeaaebb1d8aba2",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "full_name": "Tanmay Kulkarni",
+      "email": "tanmay.kulkarni@fau.de",
+      "github_username": "Tanmay2028",
+      "plugin_name": "nomad-ontology-service",
+      "module_name": "nomad_ontology_service",
+      "short_description": "NOMAD plugin for registering ontology service and exposing domain-specific ontological information",
+      "version": "0.1.0",
+      "license": "BSD-3-Clause",
+      "include_schema_package": false,
+      "include_normalizer": false,
+      "include_parser": false,
+      "include_app": false,
+      "include_example_uploads": false,
+      "include_action": false,
+      "include_north_tools": false,
+      "north_tool_name": "n",
+      "include_citation_file": false,
+      "_copy_without_render": [
+        "*.html",
+        "*.png"
+      ],
+      "_template": "https://github.com/FAIRmat-NFDI/cookiecutter-nomad-plugin",
+      "_commit": "ae953b0ba24e2df26daf5d641faeaaebb1d8aba2"
+    }
+  },
+  "directory": null
+}
