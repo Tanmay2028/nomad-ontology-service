@@ -1,27 +1,14 @@
 from nomad.config.models.plugins import APIEntryPoint
-from pydantic import Field
+from pydantic import BaseModel, Field
+
+class OntologyConfig(BaseModel):
+    name: str
+    owl_url: str  
+    excluded_root_class_iris: list[str] = []
+    included_iri_patterns: list[str] = []
 
 class OntologyServiceEntryPoint(APIEntryPoint):
-    ontology_loader: str | None = Field(
-        default=None,
-        description=(
-            "Dotted import path to a callable with signature "
-            "(imports: list[str]) -> Ontology. "
-            "Example: 'pynxtools.nomad.apis.ontology:load_nexus_ontology'"
-        ),
-    )
-    imports: list[str] = Field(
-        default=[],
-        description="List of additional OWL ontology URLs to import.",
-    )
-    excluded_root_class_iris: list[str] = Field(
-        default=[],
-        description="IRIs of classes whose full ancestor subtree is excluded from results.",
-    )
-    included_iri_patterns: list[str] = Field(
-        default=[],
-        description="Only ancestors whose IRI matches one of these substrings are returned.",
-    )
+    ontologies: list[OntologyConfig] = Field(default=[])
 
     def load(self):
         from nomad_ontology_service.apis import app

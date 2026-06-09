@@ -1,9 +1,11 @@
 import importlib
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
 from nomad.config import config
-from owlready2 import ThingClass
+from owlready2 import ThingClass, get_ontology, Ontology
+from nomad_ontology_service import OntologyConfig
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -14,34 +16,22 @@ app = FastAPI(
     title="Ontology Service",
     description="Generic ontology querying service.",
 )
+def _resolve(owl_url: str) -> str:
+    if owl_url.startswith("nomad_tmp://"):
+        rel = owl_url.removeprefix("nomad_tmp://")
+        return str(Path(config.fs.tmp) / rel)
+    return owl_url  # https:// or file:// passed through as-is
 
-_ontology = None  # loaded at startup, reused across requests
-
-
-@app.on_event("startup")
-def startup_event():
-    global _ontology
-    if not entry_point.ontology_loader:
-        logger.warning("No ontology_loader configured — service will return empty results.")
-        return
-    try:
-        module_path, func_name = entry_point.ontology_loader.rsplit(":", 1)
-        loader = getattr(importlib.import_module(module_path), func_name)
-        _ontology = loader(entry_point.imports)
-    except Exception as e:
-        logger.error(f"Failed to load ontology: {e}")
-
-
-def _fetch_superclasses(class_name: str) -> list[str]:
-    """Generic ancestor traversal, filtered by entry point config."""
-    cls = _ontology.search_one(iri="*" + class_name)
+def _fetch_superclasses(ontology: Ontology, class_name: str, cfg: OntologyConfig) -> list[str]:
+    """Generic ancestor traversal, filtered by the provided ontology config."""
+    cls = ontology.search_one(iri="*" + class_name)
     if cls is None:
         raise ValueError(f"Class '{class_name}' not found in the ontology.")
 
-    # Build exclusion set: ancestors of each listed root class
+    # Build exclusion set from the specific ontology's config
     unwanted: set[str] = set()
-    for root_iri in entry_point.excluded_root_class_iris:
-        root_cls = _ontology.search_one(iri=root_iri)
+    for root_iri in cfg.excluded_root_class_iris:
+        root_cls = ontology.search_one(iri=root_iri)
         if root_cls is not None:
             unwanted |= {sc.iri for sc in root_cls.ancestors() if hasattr(sc, "iri")}
             unwanted.add(root_iri)
@@ -51,7 +41,7 @@ def _fetch_superclasses(class_name: str) -> list[str]:
         for sc in cls.ancestors()
         if hasattr(sc, "iri")
         and sc.iri not in unwanted
-        and any(pat in sc.iri for pat in entry_point.included_iri_patterns)
+        and any(pat in sc.iri for pat in cfg.included_iri_patterns)
         and isinstance(sc, ThingClass)
     ]
 
@@ -60,13 +50,14 @@ def _fetch_superclasses(class_name: str) -> list[str]:
 def root():
     return RedirectResponse(url="/docs")
 
-
-@app.get("/superclasses/{class_name}")
-def get_superclasses(class_name: str):
-    if _ontology is None:
-        raise HTTPException(status_code=503, detail="Ontology not loaded.")
+@app.get("/{name}/superclasses/{class_name}")
+def get_superclasses(name: str, class_name: str):
+    cfg = next((c for c in entry_point.ontologies if c.name == name), None)
+    if cfg is None:
+        raise HTTPException(status_code=404, detail=f"No ontology named '{name}' configured.")
     try:
-        superclasses = _fetch_superclasses(class_name)
+        ontology = get_ontology(_resolve(cfg.owl_url)).load()
+        superclasses = _fetch_superclasses(ontology, class_name, cfg)
         return {"superclasses": superclasses}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
