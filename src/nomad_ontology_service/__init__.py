@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 class OntologyConfig(BaseModel):
     name: str
     owl_url: str  
+    imports: list[str] = []
     excluded_root_class_iris: list[str] = []
     included_iri_patterns: list[str] = []
 
@@ -11,7 +12,7 @@ class OntologyServiceEntryPoint(APIEntryPoint):
     ontologies: list[OntologyConfig] = Field(default=[])
 
     def load(self):
-        from nomad_ontology_service.apis import app
+        from nomad_ontology_service.apis.app import app
 
         return app
 
