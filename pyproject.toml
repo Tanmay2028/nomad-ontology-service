@@ -14,7 +14,7 @@ classifiers = [
 ]
 name = "nomad-ontology-service"
 description = "NOMAD plugin for registering ontology service and exposing domain-specific ontological information"
-version = "0.1.0"
+dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -25,7 +25,9 @@ maintainers = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "nomad-lab>=1.4.1"
+    "nomad-lab>=1.4.1",
+    "owlready2",
+    "fastapi",
 ]
 
 [project.urls]
