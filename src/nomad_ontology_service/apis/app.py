@@ -1,21 +1,16 @@
-import importlib
-import logging
-from fastapi import FastAPI, HTTPException, Path
+from fastapi import HTTPException
 from fastapi.responses import RedirectResponse
 from nomad.config import config
 from owlready2 import ThingClass, get_ontology, Ontology
 from nomad_ontology_service import OntologyConfig
 from pathlib import Path
+import logging
+
+from nomad_ontology_service.apis import app
 
 logger = logging.getLogger(__name__)
-
 entry_point = config.get_plugin_entry_point("nomad_ontology_service:ontology_service")
 
-app = FastAPI(
-    root_path=f"{config.services.api_base_path}/{entry_point.prefix}",
-    title="Ontology Service",
-    description="Generic ontology querying service.",
-)
 def _resolve(owl_url: str) -> str:
     if owl_url.startswith("nomad_tmp://"):
         rel = owl_url.removeprefix("nomad_tmp://")
