@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from nomad.config import config
 from owlready2 import ThingClass, get_ontology, Ontology
@@ -10,6 +10,12 @@ from nomad_ontology_service.apis import app
 
 logger = logging.getLogger(__name__)
 entry_point = config.get_plugin_entry_point("nomad_ontology_service:ontology_service")
+
+app = FastAPI(
+    root_path=f"{config.services.api_base_path}/{entry_point.prefix}",
+    title="Ontology Service",
+    description="Generic ontology querying service.",
+)
 
 def _resolve(owl_url: str) -> str:
     if owl_url.startswith("nomad_tmp://"):
@@ -32,7 +38,7 @@ def _fetch_superclasses(ontology: Ontology, class_name: str, cfg: OntologyConfig
             unwanted.add(root_iri)
 
     return [
-        sc
+        sc.iri  # Return the IRI string, NOT the object
         for sc in cls.ancestors()
         if hasattr(sc, "iri")
         and sc.iri not in unwanted
@@ -51,10 +57,13 @@ def get_superclasses(name: str, class_name: str):
     if cfg is None:
         raise HTTPException(status_code=404, detail=f"No ontology named '{name}' configured.")
     try:
-        ontology = get_ontology(_resolve(cfg.owl_url)).load()
+        resolved_url = _resolve(cfg.owl_url)
+        logger.info(f"Loading ontology from: {resolved_url}")
+        ontology = get_ontology(resolved_url).load()
         superclasses = _fetch_superclasses(ontology, class_name, cfg)
         return {"superclasses": superclasses}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="An internal error occurred.")
+    except Exception as e:
+        logger.exception(f"Error fetching superclasses for {class_name}")  # Log the actual error
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
