@@ -5,6 +5,8 @@ class OntologyConfig(BaseModel):
     name: str
     owl_url: str  
     imports: list[str] = []
+    PaNET_methods_class: str
+    NeXus_application_class: str
     excluded_root_class_iris: list[str] = []
     included_iri_patterns: list[str] = []
 
